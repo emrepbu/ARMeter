@@ -224,18 +224,6 @@ Yeni dil eklemek için:
 3. Anahtar/değer çiftlerini yeni dile çevirin.
 4. LocalizationManager'a yeni dil seçeneğini ekleyin.
 
-## Geliştirme Süreci
-
-ARMeter projesi aşağıdaki adımları içeren bir süreçle geliştirilmiştir:
-
-1. **Gereksinimlerin Belirlenmesi**: Kullanıcı ihtiyaçları ve uygulama özellikleri tanımlanmıştır.
-2. **Mimari Tasarım**: MVVM mimarisi belirlenmiş ve proje yapısı oluşturulmuştur.
-3. **AR İşlevselliği**: ARKit entegrasyonu ve temel ölçüm işlevleri geliştirilmiştir.
-4. **UI Tasarımı**: Kullanıcı arayüzü ve etkileşim akışları tasarlanmıştır.
-5. **Çoklu Dil Desteği**: Yerelleştirme altyapısı ve çeviriler eklenmiştir.
-6. **Performans Optimizasyonu**: Uygulama performansını artırmak için optimizasyonlar yapılmıştır.
-7. **Test ve Hata Düzeltmeleri**: Kapsamlı test ve hata düzeltmeleri gerçekleştirilmiştir.
-
 ## Gelecekteki Özellikler
 
 ARMeter için planlanan gelecekteki özellikler:
