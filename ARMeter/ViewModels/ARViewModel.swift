@@ -1,0 +1,269 @@
+//
+//  ARViewModel.swift
+//  ARMeter
+//
+//  Created by emre argana on 28.04.2025.
+//
+
+import Foundation
+import RealityKit
+import ARKit
+import Combine
+import SwiftUI
+import Metal
+
+// Inherit from NSObject to comply with NSObjectProtocol needed for ARSessionDelegate
+class ARViewModel: NSObject, ObservableObject {
+    // AR View reference
+    @Published var arView: ARView?
+    
+    // AR Session status
+    @Published var isTracking = false
+    @Published var trackingState: ARCamera.TrackingState = .notAvailable
+    @Published var planeDetectionStatus: String = "searching_surfaces".localized
+    @Published var raycastResult: ARRaycastResult?
+    
+    // Distance measurement values
+    @Published var currentRaycastPosition: SIMD3<Float>?
+    
+    // AR Configuration
+    private var configuration = ARWorldTrackingConfiguration()
+    private var cancellables = Set<AnyCancellable>()
+    
+    override init() {
+        super.init() // Call NSObject's initializer
+        setupConfiguration()
+        
+        // Listen for language changes
+        NotificationCenter.default.publisher(for: Notification.Name("LanguageChanged"))
+            .sink { [weak self] _ in
+                // Update localized strings when language changes
+                self?.updateLocalizedStrings()
+            }
+            .store(in: &cancellables)
+    }
+    
+    // MARK: - AR Configuration
+    
+    private func setupConfiguration() {
+        configuration.planeDetection = [.horizontal, .vertical]
+        configuration.environmentTexturing = .automatic
+        
+        // Preload basic materials to address "Could not resolve material" errors
+        precacheARResources()
+        
+        guard ARWorldTrackingConfiguration.supportsFrameSemantics(.personSegmentationWithDepth) else {
+            return
+        }
+        
+        // Add person segmentation with depth detection if device supports it
+        configuration.frameSemantics.insert(.personSegmentationWithDepth)
+    }
+    
+    private func precacheARResources() {
+        // Create basic entities to initialize material caches
+        let _ = ModelEntity()
+        let _ = AnchorEntity()
+        
+        // Force load common materials
+        let _ = SimpleMaterial(color: .red, roughness: 0.5, isMetallic: false)
+        let _ = SimpleMaterial(color: .green, roughness: 0.5, isMetallic: false)
+        let _ = SimpleMaterial(color: .blue, roughness: 0.5, isMetallic: false)
+    }
+    
+    // MARK: - AR Session Management
+    
+    func setupARView(_ view: ARView) {
+        self.arView = view
+        
+        // AR Görünümünü optimize edelim
+        view.renderOptions = [.disablePersonOcclusion, .disableMotionBlur, .disableFaceMesh]
+        view.contentScaleFactor = UIScreen.main.scale // Doğru çözünürlüğü kullan
+        
+        // Kamera görüntüsünün görünmesi için
+        view.environment.background = .cameraFeed()
+        
+        // Metal performans optimizasyonları
+        if let _ = MTLCreateSystemDefaultDevice() {
+            // Metal device başarıyla oluşturuldu
+        }
+        
+        // AR Konfigürasyonu ile başlat ve optimizasyonları ayarla
+        // Kamera görüntüsünün çalışmasını sağlamak için temel yapılandırma
+        let minimalConfig = ARWorldTrackingConfiguration()
+        minimalConfig.planeDetection = [.horizontal, .vertical]
+        minimalConfig.environmentTexturing = .automatic
+        view.session.run(minimalConfig, options: [.resetTracking, .removeExistingAnchors])
+        
+        // Sonra tam oturumu başlat
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+            view.session.run(self.configuration, options: [])
+            view.session.delegate = self
+        }
+        
+        // Yönlendirme katmanını ayarla (kullanıcı rehberliği)
+        setupCoachingOverlay(for: view)
+        
+        // AR görünüm özelliklerini ayarla
+        #if DEBUG
+        view.debugOptions = [.showFeaturePoints]
+        #endif
+        
+        // Ortam ışığı tahmini basit olsun
+        view.environment.lighting.intensityExponent = 1
+    }
+    
+    func resetARSession() {
+        // Reset ARSession and cleanup any environment probes
+        arView?.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        
+        // Clean up any retained ARFrames
+        autoreleasepool {
+            // Force a memory cleanup
+            let tempView = ARView(frame: .zero)
+            tempView.session.pause()
+            tempView.removeFromSuperview()
+        }
+    }
+    
+    private func setupCoachingOverlay(for view: ARView) {
+        let coachingOverlay = ARCoachingOverlayView()
+        coachingOverlay.session = view.session
+        coachingOverlay.goal = .horizontalPlane
+        coachingOverlay.activatesAutomatically = true
+        
+        coachingOverlay.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(coachingOverlay)
+        
+        NSLayoutConstraint.activate([
+            coachingOverlay.topAnchor.constraint(equalTo: view.topAnchor),
+            coachingOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            coachingOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            coachingOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
+    
+    // MARK: - Raycast Operations
+    
+    func performRaycast(at point: CGPoint) -> SIMD3<Float>? {
+        guard let arView = arView, let query = arView.makeRaycastQuery(from: point, 
+                            allowing: .estimatedPlane, 
+                            alignment: .any) else {
+            return nil
+        }
+        
+        // Get raycast results
+        let results = arView.session.raycast(query)
+        
+        guard let firstResult = results.first else {
+            return nil
+        }
+        
+        self.raycastResult = firstResult
+        let worldPosition = SIMD3<Float>(
+            firstResult.worldTransform.columns.3.x,
+            firstResult.worldTransform.columns.3.y,
+            firstResult.worldTransform.columns.3.z
+        )
+        
+        self.currentRaycastPosition = worldPosition
+        return worldPosition
+    }
+    
+    // MARK: - AR Content Addition
+    
+    func placeVirtualObject(at position: SIMD3<Float>) -> AnchorEntity {
+        let anchor = AnchorEntity(world: position)
+        
+        // Create a virtual object
+        let sphere = ModelEntity(
+            mesh: .generateSphere(radius: 0.02),
+            materials: [SimpleMaterial(color: .red, isMetallic: true)]
+        )
+        
+        anchor.addChild(sphere)
+        arView?.scene.addAnchor(anchor)
+        
+        return anchor
+    }
+    
+    func updateTrackingStatus() {
+        guard let arView = arView else { return }
+        
+        // We're now using the trackingState that was already captured from the frame
+        // This prevents holding onto the ARFrame reference
+        
+        switch trackingState {
+        case .normal:
+            self.isTracking = true
+            self.planeDetectionStatus = "ready".localized
+        case .limited(let reason):
+            self.isTracking = false
+            
+            switch reason {
+            case .excessiveMotion:
+                self.planeDetectionStatus = "tracking_excessive_motion".localized
+            case .insufficientFeatures:
+                self.planeDetectionStatus = "tracking_insufficient_features".localized
+            case .initializing:
+                self.planeDetectionStatus = "tracking_initializing".localized
+            case .relocalizing:
+                self.planeDetectionStatus = "tracking_relocalizing".localized
+            @unknown default:
+                self.planeDetectionStatus = "tracking_unknown_limitation".localized
+            }
+        case .notAvailable:
+            self.isTracking = false
+            self.planeDetectionStatus = "tracking_unavailable".localized
+        @unknown default:
+            self.isTracking = false
+            self.planeDetectionStatus = "tracking_unknown_state".localized
+        }
+    }
+    
+    // Update localized strings when language changes
+    private func updateLocalizedStrings() {
+        // Update status message based on current tracking state
+        updateTrackingStatus()
+    }
+}
+
+// MARK: - ARSessionDelegate
+extension ARViewModel: ARSessionDelegate {
+    func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        // Kritik: ARFrame tutulmayacak, sadece gerekli bilgiler alınacak
+        let trackingState = frame.camera.trackingState
+        
+        // Ana thread'e geçmeden önce lokal değişkenlere kopyalama yapıyoruz
+        // Bu sayede frame referansını tutmuyoruz
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.trackingState = trackingState
+            self.updateTrackingStatus()
+        }
+        
+        // Frame'i kesinlikle tutmuyoruz - hemen serbest bırakıyoruz
+    }
+    
+    func session(_ session: ARSession, didFailWithError error: Error) {
+        DispatchQueue.main.async {
+            self.planeDetectionStatus = "ar_session_error".localized(with: error.localizedDescription)
+            self.isTracking = false
+        }
+    }
+    
+    func sessionWasInterrupted(_ session: ARSession) {
+        DispatchQueue.main.async {
+            self.planeDetectionStatus = "ar_session_interrupted".localized
+            self.isTracking = false
+        }
+    }
+    
+    func sessionInterruptionEnded(_ session: ARSession) {
+        DispatchQueue.main.async {
+            self.planeDetectionStatus = "ar_session_resumed".localized
+            self.resetARSession()
+        }
+    }
+}

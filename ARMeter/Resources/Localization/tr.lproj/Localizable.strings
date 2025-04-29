@@ -1,0 +1,72 @@
+/* 
+  Localizable.strings (Turkish)
+  ARMeter
+  
+  Created by emre argana on 28.04.2025.
+*/
+
+// General
+"app_name" = "ARMeter";
+
+// AR Status Messages
+"searching_surfaces" = "Düz yüzeyler aranıyor...";
+"ready" = "Hazır";
+"tracking_excessive_motion" = "Çok hızlı hareket ediyorsunuz";
+"tracking_insufficient_features" = "Daha fazla nesne veya doku gerektiriyor";
+"tracking_initializing" = "Başlatılıyor...";
+"tracking_relocalizing" = "Konum belirleniyor...";
+"tracking_unavailable" = "Takip yapılamıyor";
+"tracking_unknown_limitation" = "Bilinmeyen sınırlama";
+"tracking_unknown_state" = "Bilinmeyen durum";
+"ar_session_error" = "AR oturumu hatası: %@";
+"ar_session_interrupted" = "AR oturumu kesildi";
+"ar_session_resumed" = "AR oturumu devam ediyor";
+
+// Measurement Instructions
+"place_start_point" = "Başlangıç noktasını yerleştirmek için ekrana dokunun";
+"place_end_point" = "Bitiş noktasını yerleştirmek için ekrana dokunun";
+
+// Measurement Result
+"measurement_result" = "Ölçüm Sonucu";
+"add_note_optional" = "Not ekle (isteğe bağlı)";
+"cancel" = "İptal";
+"save" = "Kaydet";
+
+// Error View
+"error" = "Hata";
+"try_again" = "Tekrar Dene";
+
+// Bottom Control Panel
+"unit" = "Birim";
+"history" = "Geçmiş";
+
+// Unit Names
+"meter" = "Metre (m)";
+"centimeter" = "Santimetre (cm)";
+"inch" = "İnç (in)";
+"foot" = "Fit (ft)";
+"select_unit" = "Ölçüm Birimi Seçin";
+
+// Settings
+"settings" = "Ayarlar";
+"haptic_feedback" = "Dokunsal Geri Bildirim";
+"show_guide_points" = "Kılavuz Noktalarını Göster";
+"show_tutorial" = "Eğitim Turunu Göster";
+"version" = "ARMeter v1.0";
+
+// History View
+"measurement_history" = "Ölçüm Geçmişi";
+"no_measurements" = "Henüz kaydedilmiş ölçüm bulunmuyor";
+
+// Onboarding
+"welcome_title" = "ARMeter'e Hoş Geldiniz";
+"welcome_description" = "Artırılmış gerçeklik teknolojisi ile gerçek dünyada ölçüm yapmanın en kolay yolu.";
+"simple_measurements_title" = "Basit ve Doğru Ölçümler";
+"simple_measurements_description" = "İki nokta arasındaki mesafeyi ölçmek hiç bu kadar kolay olmamıştı. Sadece ekrana dokunarak başlangıç ve bitiş noktalarını işaretleyin.";
+"save_measurements_title" = "Ölçümleri Kaydedin";
+"save_measurements_description" = "Yaptığınız ölçümleri not ekleyerek kaydedebilir ve daha sonra başvurmak üzere saklayabilirsiniz.";
+"multiple_units_title" = "Birden Fazla Birim";
+"multiple_units_description" = "Metre, santimetre, inç veya fit arasında ihtiyacınıza göre birim değiştirebilirsiniz.";
+"next" = "İleri";
+"start" = "Başlat";
+"skip" = "Atla";
