@@ -46,6 +46,28 @@ class AppViewModel: ObservableObject {
     private var arView: ARView?
     private var anchors: [AnchorEntity] = []
     
+    // Material cache for performance optimization
+    private static let cachedMaterials: [String: SimpleMaterial] = {
+        var materials: [String: SimpleMaterial] = [:]
+        
+        do {
+            materials["greenPoint"] = try SimpleMaterial(color: UIColor.green, roughness: 0.7, isMetallic: false)
+            materials["redPoint"] = try SimpleMaterial(color: UIColor.red, roughness: 0.7, isMetallic: false)
+            materials["line"] = try SimpleMaterial(color: UIColor.blue, roughness: 0.7, isMetallic: false)
+            materials["textLabel"] = try SimpleMaterial(color: UIColor.white, roughness: 0.8, isMetallic: false)
+            materials["textBackground"] = try SimpleMaterial(color: UIColor(red: 0, green: 0, blue: 0, alpha: 0.6), roughness: 0.8, isMetallic: false)
+        } catch {
+            print("Failed to create cached materials: \(error)")
+            // Fallback: Create basic materials without try-catch for essential functionality
+            materials["greenPoint"] = SimpleMaterial(color: UIColor.green, roughness: 0.7, isMetallic: false)
+            materials["redPoint"] = SimpleMaterial(color: UIColor.red, roughness: 0.7, isMetallic: false)
+            materials["line"] = SimpleMaterial(color: UIColor.blue, roughness: 0.7, isMetallic: false)
+            materials["textLabel"] = SimpleMaterial(color: UIColor.white, roughness: 0.8, isMetallic: false)
+            materials["textBackground"] = SimpleMaterial(color: UIColor(red: 0, green: 0, blue: 0, alpha: 0.6), roughness: 0.8, isMetallic: false)
+        }
+        
+        return materials
+    }()
     
     // Combiners
     private var cancellables = Set<AnyCancellable>()
@@ -81,13 +103,20 @@ class AppViewModel: ObservableObject {
         // Kamera görüntüsünün gösterilmesi için arka planı varsayılan olarak ayarla
         arView.environment.background = .cameraFeed()
         
-        arSession?.run(config, options: [.removeExistingAnchors, .resetTracking])
-        
-        // Tüm çevre prob'larını devre dışı bırak
-        arView.environment.sceneUnderstanding.options = []
-        
-        checkARCapabilities()
-        appState = hasCompletedOnboarding ? .ready : .onboarding
+        // AR session'ı güvenli bir şekilde başlat
+        do {
+            arSession?.run(config, options: [.removeExistingAnchors, .resetTracking])
+            
+            // Tüm çevre prob'larını devre dışı bırak
+            arView.environment.sceneUnderstanding.options = []
+            
+            checkARCapabilities()
+            appState = hasCompletedOnboarding ? .ready : .onboarding
+        } catch {
+            print("Failed to start AR session: \(error)")
+            arError = "Failed to start AR session: \(error.localizedDescription)"
+            appState = .error("AR session could not be started. Please restart the app.")
+        }
     }
     
     private func checkARCapabilities() {
@@ -194,88 +223,105 @@ class AppViewModel: ObservableObject {
     private func addPointAnchor(at position: SIMD3<Float>, color: UIColor) {
         guard let arView = arView else { return }
         
-        // UI güncellemelerini ana thread'de yap
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            // Basit bir anchor oluştur
-            let anchor = AnchorEntity(world: position)
-            
-            // Küçük bir küre oluştur - basit malzeme kullan
-            let mesh = MeshResource.generateSphere(radius: 0.02)
-            // Performans için basit, metalik olmayan malzeme kullan
-            let material = SimpleMaterial(color: color, roughness: 0.7, isMetallic: false)
-            let sphere = ModelEntity(mesh: mesh, materials: [material])
-            
-            // Anchor'a ekle ve AR görünümüne ekle
+        // Bu fonksiyon zaten main thread'den çağrılıyor
+        // Basit bir anchor oluştur
+        let anchor = AnchorEntity(world: position)
+        
+        // Küçük bir küre oluştur - basit malzeme kullan
+        let mesh: MeshResource
+        do {
+            mesh = try MeshResource.generateSphere(radius: 0.02)
+        } catch {
+            print("Failed to generate sphere mesh: \(error)")
+            return // Graceful failure - don't crash the app
+        }
+        
+        // Cached material kullan - color'a göre seç
+        let materialKey: String
+        if color == UIColor.green {
+            materialKey = "greenPoint"
+        } else if color == UIColor.red {
+            materialKey = "redPoint"
+        } else {
+            // Fallback: new material (nadir durum)
+            let sphere = ModelEntity(mesh: mesh, materials: [SimpleMaterial(color: color, roughness: 0.7, isMetallic: false)])
             anchor.addChild(sphere)
             arView.scene.addAnchor(anchor)
             self.anchors.append(anchor)
+            return
         }
+        
+        guard let material = Self.cachedMaterials[materialKey] else { return }
+        let sphere = ModelEntity(mesh: mesh, materials: [material])
+        
+        // Anchor'a ekle ve AR görünümüne ekle
+        anchor.addChild(sphere)
+        arView.scene.addAnchor(anchor)
+        self.anchors.append(anchor)
     }
     
     private func addLineAnchor(from start: SIMD3<Float>, to end: SIMD3<Float>) {
         guard let arView = arView else { return }
         
-        // Bu işlemi ana thread'de yapmalıyız
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let anchor = AnchorEntity(world: start)
-            
-            // İki nokta arasındaki mesafeyi hesapla
-            let distance = simd_distance(start, end)
-            
-            // İki nokta arasındaki yönü belirle
-            let direction = simd_normalize(end - start)
-            
-            // İki nokta arasındaki orta nokta
-            let midPoint = (start + end) / 2
-            
-            // Gelecekte ortaya çıkabilecek Metal hatalarını önlemek için
-            // Metalik olmayan, basit bir çizgi kullan
-            let mesh = MeshResource.generateBox(size: [0.005, 0.005, distance])
-            let material = SimpleMaterial(color: UIColor.blue, roughness: 0.7, isMetallic: false)
-            let line = ModelEntity(mesh: mesh, materials: [material])
-            
-            // Dönüş matrisini hesapla
-            // Başlangıç yönü: (0, 0, 1)
-            // Hedef yön: direction
-            let startDirection = SIMD3<Float>(0, 0, 1)
-            let rotationAxis = simd_cross(startDirection, direction)
-            let rotationAngle = acos(simd_dot(startDirection, direction))
-            
-            if simd_length(rotationAxis) > 0.001 {
-                let rotation = simd_quaternion(rotationAngle, simd_normalize(rotationAxis))
-                line.transform.rotation = rotation
-            }
-            
-            // Çizgiyi konumlandır
-            line.transform.translation = midPoint - start
-            
-            // Anchor'a ekle ve görünüme ekle
-            anchor.addChild(line)
-            arView.scene.addAnchor(anchor)
-            self.anchors.append(anchor)
-            
-            // Orta noktaya mesafe etiketi ekle - ana çizgiyi ekledikten sonra
-            // yapılmalı (performans için ayrı bir async çağrıda)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                self?.addDistanceLabel(at: midPoint, distance: distance)
-            }
+        // Bu fonksiyon zaten main thread'den çağrılıyor
+        let anchor = AnchorEntity(world: start)
+        
+        // İki nokta arasındaki mesafeyi hesapla
+        let distance = simd_distance(start, end)
+        
+        // İki nokta arasındaki yönü belirle
+        let direction = simd_normalize(end - start)
+        
+        // İki nokta arasındaki orta nokta
+        let midPoint = (start + end) / 2
+        
+        // Gelecekte ortaya çıkabilecek Metal hatalarını önlemek için
+        // Metalik olmayan, basit bir çizgi kullan
+        let mesh: MeshResource
+        do {
+            mesh = try MeshResource.generateBox(size: [0.005, 0.005, distance])
+        } catch {
+            print("Failed to generate line mesh: \(error)")
+            return // Graceful failure - don't crash the app
+        }
+        guard let material = Self.cachedMaterials["line"] else { return }
+        let line = ModelEntity(mesh: mesh, materials: [material])
+        
+        // Dönüş matrisini hesapla
+        // Başlangıç yönü: (0, 0, 1)
+        // Hedef yön: direction
+        let startDirection = SIMD3<Float>(0, 0, 1)
+        let rotationAxis = simd_cross(startDirection, direction)
+        let rotationAngle = acos(simd_dot(startDirection, direction))
+        
+        if simd_length(rotationAxis) > 0.001 {
+            let rotation = simd_quaternion(rotationAngle, simd_normalize(rotationAxis))
+            line.transform.rotation = rotation
+        }
+        
+        // Çizgiyi konumlandır
+        line.transform.translation = midPoint - start
+        
+        // Anchor'a ekle ve görünüme ekle
+        anchor.addChild(line)
+        arView.scene.addAnchor(anchor)
+        self.anchors.append(anchor)
+        
+        // Add distance label at midpoint - with short delay
+        // (to wait for line rendering)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.addDistanceLabel(at: midPoint, distance: distance)
         }
     }
     
     private func addDistanceLabel(at position: SIMD3<Float>, distance: Float) {
         guard let arView = arView else { return }
         
-        // Etiketler UI işlemi olduğu için ana thread'de oluşturulmalı
-        DispatchQueue.main.async { [weak self] in
+        // Do distance formatting and mesh generation on background thread
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
-            let anchor = AnchorEntity(world: position)
-            
-            // Mesafeyi formatla
+            // Format distance
             let convertedDistance = self.selectedUnit.convert(fromMeters: distance)
             let formattedDistance: String
             
@@ -289,37 +335,52 @@ class AppViewModel: ObservableObject {
                 formattedDistance = "\(convertedDistance) \(self.selectedUnit.rawValue)"
             }
             
-            // Daha basit bir etiket oluştur - daha iyi performans için
-            let textMesh = MeshResource.generateText(
-                formattedDistance,
-                extrusionDepth: 0.001,
-                font: .systemFont(ofSize: 0.03, weight: .medium),
-                alignment: .center
-            )
+            // Expensive text mesh generation background thread'de
+            let textMesh: MeshResource
+            let backgroundMesh: MeshResource
             
-            // Basit, metalik olmayan malzeme ile etiket oluştur
-            let textMaterial = SimpleMaterial(color: UIColor.white, roughness: 0.8, isMetallic: false)
-            let textEntity = ModelEntity(mesh: textMesh, materials: [textMaterial])
+            do {
+                textMesh = try MeshResource.generateText(
+                    formattedDistance,
+                    extrusionDepth: 0.001,
+                    font: .systemFont(ofSize: 0.03, weight: .medium),
+                    alignment: .center
+                )
+                
+                // Background mesh generation
+                backgroundMesh = try MeshResource.generatePlane(width: 0.15, height: 0.05)
+            } catch {
+                print("Failed to generate text/background mesh: \(error)")
+                return // Graceful failure - skip label creation if mesh generation fails
+            }
             
-            // Arkaplan oluştur - basitleştirilmiş
-            let backgroundMesh = MeshResource.generatePlane(width: 0.15, height: 0.05)
-            let backgroundMaterial = SimpleMaterial(color: UIColor(red: 0, green: 0, blue: 0, alpha: 0.6), 
-                                                   roughness: 0.8, isMetallic: false)
-            let backgroundEntity = ModelEntity(mesh: backgroundMesh, materials: [backgroundMaterial])
-            
-            // Yazıyı ayarla
-            textEntity.transform.translation = [0, 0, 0.001]
-            
-            // Arkaplanı ekle
-            backgroundEntity.addChild(textEntity)
-            anchor.addChild(backgroundEntity)
-            
-            // Kamera yönüne dönüşünü ayarla
-            anchor.look(at: arView.cameraTransform.translation, from: position, relativeTo: nil)
-            
-            // Sahneye ekle
-            arView.scene.addAnchor(anchor)
-            self.anchors.append(anchor)
+            // UI updates main thread'de
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self, let arView = self.arView else { return }
+                
+                let anchor = AnchorEntity(world: position)
+                
+                // Cached materials kullan
+                guard let textMaterial = Self.cachedMaterials["textLabel"],
+                      let backgroundMaterial = Self.cachedMaterials["textBackground"] else { return }
+                
+                let textEntity = ModelEntity(mesh: textMesh, materials: [textMaterial])
+                let backgroundEntity = ModelEntity(mesh: backgroundMesh, materials: [backgroundMaterial])
+                
+                // Set up text
+                textEntity.transform.translation = [0, 0, 0.001]
+                
+                // Add background
+                backgroundEntity.addChild(textEntity)
+                anchor.addChild(backgroundEntity)
+                
+                // Set rotation towards camera
+                anchor.look(at: arView.cameraTransform.translation, from: position, relativeTo: nil)
+                
+                // Add to scene
+                arView.scene.addAnchor(anchor)
+                self.anchors.append(anchor)
+            }
         }
     }
     
@@ -335,11 +396,10 @@ class AppViewModel: ObservableObject {
             self.anchors.removeAll()
             
             // Clean up any potentially dangling environment probes
-            if let scene = arView.scene as? RealityKit.Scene {
-                for anchor in scene.anchors {
-                    if anchor.name.contains("probe") || anchor.name.contains("Probe") {
-                        scene.removeAnchor(anchor)
-                    }
+            let scene = arView.scene
+            for anchor in scene.anchors {
+                if anchor.name.contains("probe") || anchor.name.contains("Probe") {
+                    scene.removeAnchor(anchor)
                 }
             }
         }

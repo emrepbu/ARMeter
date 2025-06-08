@@ -45,7 +45,7 @@ struct MeasurementView: View {
                 }
             }
         }
-        // Modal Sheets - Alttan açılan menüler
+        // Modal Sheets - Bottom popup menus
         .sheet(isPresented: $showUnitPicker) {
             UnitPickerView(isPresented: $showUnitPicker)
                 .environmentObject(appViewModel)
@@ -213,7 +213,7 @@ struct ARViewContainer: UIViewRepresentable {
     
     class Coordinator: NSObject {
         var parent: ARViewContainer
-        // İşlem kilidini önlemek için işlem bayrağı
+        // Processing flag to prevent operation lock
         private var isProcessingTap = false
         
         init(_ parent: ARViewContainer) {
@@ -225,31 +225,33 @@ struct ARViewContainer: UIViewRepresentable {
             guard !isProcessingTap else { return }
             guard let arView = gesture.view as? ARView else { return }
             
-            // Dokunma noktasını lokal olarak al
+            // Get touch location locally
             let touchLocation = gesture.location(in: arView)
             
-            // İşlem bayrağını ayarla
+            // Set processing flag
             isProcessingTap = true
             
-            // Ray-casting işlemini arka planda yap
+            // Perform ray-casting in background
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 guard let self = self else {
-                    DispatchQueue.main.async {
-                        self?.isProcessingTap = false
-                    }
+                    // If self is nil, unable to reset flag on main thread
+                    // parent coordinator reference would be needed but not possible
+                    // In this case the operation is already cancelled
                     return
                 }
                 
-                // Önemli: world position'u lokal olarak tut
+                // Important: keep world position locally
                 var worldPosition: SIMD3<Float>? = nil
                 if let position = self.parent.arViewModel.performRaycast(at: touchLocation) {
                     worldPosition = position
                 }
                 
-                // UI güncellemelerini ana thread'e taşı
-                DispatchQueue.main.async {
+                // Move UI updates to main thread
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
                     if let position = worldPosition {
-                        // State'e göre işlemleri gerçekleştir
+                        // Perform operations based on state
                         switch self.parent.appViewModel.appState {
                         case .placingStartPoint:
                             self.parent.appViewModel.setStartPoint(position)
@@ -260,7 +262,7 @@ struct ARViewContainer: UIViewRepresentable {
                         }
                     }
                     
-                    // İşlem tamamlandı, bayrağı sıfırla
+                    // Operation completed, reset flag - now always on main thread
                     self.isProcessingTap = false
                 }
             }

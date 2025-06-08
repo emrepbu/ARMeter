@@ -69,54 +69,63 @@ class ARViewModel: NSObject, ObservableObject {
     func setupARView(_ view: ARView) {
         self.arView = view
         
-        // AR Görünümünü optimize edelim
+        // Optimize AR View
         view.renderOptions = [.disablePersonOcclusion, .disableMotionBlur, .disableFaceMesh]
-        view.contentScaleFactor = UIScreen.main.scale // Doğru çözünürlüğü kullan
+        view.contentScaleFactor = UIScreen.main.scale // Use correct resolution
         
-        // Kamera görüntüsünün görünmesi için
+        // Enable camera feed background
         view.environment.background = .cameraFeed()
         
         // Metal performans optimizasyonları
         if let _ = MTLCreateSystemDefaultDevice() {
-            // Metal device başarıyla oluşturuldu
+            // Metal device created successfully
         }
         
-        // AR Konfigürasyonu ile başlat ve optimizasyonları ayarla
-        // Kamera görüntüsünün çalışmasını sağlamak için temel yapılandırma
+        // Start with AR configuration and set optimizations
+        // Basic configuration to enable camera feed
         let minimalConfig = ARWorldTrackingConfiguration()
         minimalConfig.planeDetection = [.horizontal, .vertical]
         minimalConfig.environmentTexturing = .automatic
         view.session.run(minimalConfig, options: [.resetTracking, .removeExistingAnchors])
         
-        // Sonra tam oturumu başlat
+        // Then start full session
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self = self else { return }
             view.session.run(self.configuration, options: [])
             view.session.delegate = self
         }
         
-        // Yönlendirme katmanını ayarla (kullanıcı rehberliği)
+        // Setup coaching overlay (user guidance)
         setupCoachingOverlay(for: view)
         
-        // AR görünüm özelliklerini ayarla
+        // Configure AR view properties
         #if DEBUG
         view.debugOptions = [.showFeaturePoints]
         #endif
         
-        // Ortam ışığı tahmini basit olsun
+        // Keep ambient light estimation simple
         view.environment.lighting.intensityExponent = 1
     }
     
     func resetARSession() {
         // Reset ARSession and cleanup any environment probes
-        arView?.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
-        
-        // Clean up any retained ARFrames
-        autoreleasepool {
-            // Force a memory cleanup
-            let tempView = ARView(frame: .zero)
-            tempView.session.pause()
-            tempView.removeFromSuperview()
+        do {
+            arView?.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+            
+            // Clean up any retained ARFrames
+            autoreleasepool {
+                // Force a memory cleanup
+                let tempView = ARView(frame: .zero)
+                tempView.session.pause()
+                tempView.removeFromSuperview()
+            }
+        } catch {
+            print("Failed to reset AR session: \(error)")
+            // Update tracking status to reflect the error
+            DispatchQueue.main.async { [weak self] in
+                self?.planeDetectionStatus = "Failed to reset AR session"
+                self?.isTracking = false
+            }
         }
     }
     
