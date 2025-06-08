@@ -189,7 +189,7 @@ class ARViewModel: NSObject, ObservableObject {
     }
     
     func updateTrackingStatus() {
-        guard let arView = arView else { return }
+        guard arView != nil else { return }
         
         // We're now using the trackingState that was already captured from the frame
         // This prevents holding onto the ARFrame reference
