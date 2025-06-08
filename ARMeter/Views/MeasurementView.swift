@@ -18,7 +18,6 @@ struct MeasurementView: View {
     @State private var showUnitPicker = false
     @State private var showSettings = false
     @State private var showHistory = false
-    @State private var showLanguageSettings = false
     
     var body: some View {
         ZStack {
@@ -52,15 +51,11 @@ struct MeasurementView: View {
                 .environmentObject(appViewModel)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView(isPresented: $showSettings, showLanguageSettings: $showLanguageSettings)
+            SettingsView(isPresented: $showSettings)
                 .environmentObject(appViewModel)
         }
         .sheet(isPresented: $showHistory) {
             HistoryView(isPresented: $showHistory)
-                .environmentObject(appViewModel)
-        }
-        .sheet(isPresented: $showLanguageSettings) {
-            LanguageSettingsView(isPresented: $showLanguageSettings)
                 .environmentObject(appViewModel)
         }
     }
@@ -111,7 +106,7 @@ struct MeasurementView: View {
                 VStack {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 22))
-                    Text("history".localized)
+                    Text("History")
                         .font(.caption)
                 }
                 .frame(width: 60, height: 60)
@@ -304,14 +299,14 @@ struct UnitPickerView: View {
                 }
                 .listStyle(InsetGroupedListStyle())
             }
-            .navigationTitle("select_unit".localized)
+            .navigationTitle("Select Measurement Unit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         presentationMode.wrappedValue.dismiss()
                     }) {
-                        Text("cancel".localized)
+                        Text("Cancel")
                             .fontWeight(.bold)
                     }
                 }
@@ -324,13 +319,13 @@ struct UnitPickerView: View {
     private func unitName(for unit: MeasurementUnit) -> String {
         switch unit {
         case .meters:
-            return "meter".localized
+            return "Meter (m)"
         case .centimeters:
-            return "centimeter".localized
+            return "Centimeter (cm)"
         case .inches:
-            return "inch".localized
+            return "Inch (in)"
         case .feet:
-            return "foot".localized
+            return "Foot (ft)"
         }
     }
 }
@@ -339,19 +334,18 @@ struct UnitPickerView: View {
 struct SettingsView: View {
     @EnvironmentObject private var appViewModel: AppViewModel
     @Binding var isPresented: Bool
-    @Binding var showLanguageSettings: Bool
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         NavigationView {
             List {
                 Section {
-                    Toggle("haptic_feedback".localized, isOn: $appViewModel.hapticFeedbackEnabled)
+                    Toggle("Haptic Feedback", isOn: $appViewModel.hapticFeedbackEnabled)
                         .onChange(of: appViewModel.hapticFeedbackEnabled) { _ in
                             appViewModel.toggleHapticFeedback()
                         }
                     
-                    Toggle("show_guide_points".localized, isOn: $appViewModel.showGuidePoints)
+                    Toggle("Show Guide Points", isOn: $appViewModel.showGuidePoints)
                         .onChange(of: appViewModel.showGuidePoints) { _ in
                             appViewModel.toggleGuidePoints()
                         }
@@ -362,23 +356,15 @@ struct SettingsView: View {
                         appViewModel.isShowingMeasurementTutorial = true
                         presentationMode.wrappedValue.dismiss()
                     }) {
-                        Label("show_tutorial".localized, systemImage: "questionmark.circle")
+                        Label("Show Tutorial", systemImage: "questionmark.circle")
                     }
                     
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            showLanguageSettings = true
-                        }
-                    }) {
-                        Label("Language Settings", systemImage: "globe")
-                    }
                 }
                 
                 Section {
                     HStack {
                         Spacer()
-                        Text("version".localized)
+                        Text("ARMeter v1.0")
                             .font(.caption)
                             .foregroundColor(.gray)
                         Spacer()
@@ -386,7 +372,7 @@ struct SettingsView: View {
                 }
             }
             .listStyle(InsetGroupedListStyle())
-            .navigationTitle("settings".localized)
+            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -404,56 +390,6 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Language Settings View
-struct LanguageSettingsView: View {
-    @EnvironmentObject private var appViewModel: AppViewModel
-    @Binding var isPresented: Bool
-    @Environment(\.presentationMode) var presentationMode
-    
-    let languages = [
-        ("English", "en"),
-        ("Türkçe", "tr")
-    ]
-    
-    var body: some View {
-        NavigationView {
-            List {
-                ForEach(languages, id: \.1) { language in
-                    Button(action: {
-                        appViewModel.setLanguage(language.1)
-                    }) {
-                        HStack {
-                            Text(language.0)
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            if appViewModel.localizationManager.currentLanguage == language.1 {
-                                Image(systemName: "checkmark")
-                                .foregroundColor(Color(UIColor.blue))
-                            }
-                        }
-                    }
-                }
-            }
-            .listStyle(InsetGroupedListStyle())
-            .navigationTitle("Language")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Text("Done")
-                            .fontWeight(.bold)
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
-}
 
 // MARK: - History View
 struct HistoryView: View {
@@ -467,7 +403,7 @@ struct HistoryView: View {
                 if appViewModel.measurements.isEmpty {
                     VStack {
                         Spacer()
-                        Text("no_measurements".localized)
+                        Text("No saved measurements yet")
                             .foregroundColor(.gray)
                         Spacer()
                     }
@@ -502,7 +438,7 @@ struct HistoryView: View {
                     .listStyle(InsetGroupedListStyle())
                 }
             }
-            .navigationTitle("measurement_history".localized)
+            .navigationTitle("Measurement History")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

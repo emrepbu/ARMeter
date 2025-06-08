@@ -82,8 +82,8 @@ struct StatusOverlayView: View {
                appViewModel.appState == .placingEndPoint {
                 
                 let instruction = appViewModel.appState == .placingStartPoint ?
-                    "place_start_point".localized :
-                    "place_end_point".localized
+                    "Tap to place start point" :
+                    "Tap to place end point"
                 
                 Text(instruction)
                     .font(.headline)
@@ -114,7 +114,7 @@ struct MeasurementResultView: View {
                     .padding(.top, 20)
                 
                 // Note input
-                TextField("add_note_optional".localized, text: $note)
+                TextField("Add note (optional)", text: $note)
                     .padding()
                     .background(Color(UIColor.secondarySystemBackground))
                     .cornerRadius(10)
@@ -128,7 +128,7 @@ struct MeasurementResultView: View {
                         appViewModel.saveMeasurement(with: note.isEmpty ? nil : note)
                         presentationMode.wrappedValue.dismiss()
                     }) {
-                        Text("save".localized)
+                        Text("Save")
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -141,7 +141,7 @@ struct MeasurementResultView: View {
                         appViewModel.clearCurrentMeasurement()
                         presentationMode.wrappedValue.dismiss()
                     }) {
-                        Text("cancel".localized)
+                        Text("Cancel")
                             .fontWeight(.medium)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -153,7 +153,7 @@ struct MeasurementResultView: View {
                 .padding()
             }
             .padding()
-            .navigationTitle("measurement_result".localized)
+            .navigationTitle("Measurement Result")
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.height(350)])
@@ -172,7 +172,7 @@ struct ErrorView: View {
                 .font(.system(size: 70))
                 .foregroundColor(.yellow)
             
-            Text("error".localized)
+            Text("Error")
                 .font(.title)
                 .fontWeight(.bold)
             
@@ -185,7 +185,7 @@ struct ErrorView: View {
                 // Return application to ready state
                 appViewModel.appState = .ready
             }) {
-                Text("try_again".localized)
+                Text("Try Again")
                     .padding()
                     .frame(width: 200)
                     .background(Color.blue)

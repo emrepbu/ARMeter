@@ -20,7 +20,7 @@ class ARViewModel: NSObject, ObservableObject {
     // AR Session status
     @Published var isTracking = false
     @Published var trackingState: ARCamera.TrackingState = .notAvailable
-    @Published var planeDetectionStatus: String = "searching_surfaces".localized
+    @Published var planeDetectionStatus: String = "Searching for surfaces..."
     @Published var raycastResult: ARRaycastResult?
     
     // Distance measurement values
@@ -34,13 +34,6 @@ class ARViewModel: NSObject, ObservableObject {
         super.init() // Call NSObject's initializer
         setupConfiguration()
         
-        // Listen for language changes
-        NotificationCenter.default.publisher(for: Notification.Name("LanguageChanged"))
-            .sink { [weak self] _ in
-                // Update localized strings when language changes
-                self?.updateLocalizedStrings()
-            }
-            .store(in: &cancellables)
     }
     
     // MARK: - AR Configuration
@@ -197,36 +190,31 @@ class ARViewModel: NSObject, ObservableObject {
         switch trackingState {
         case .normal:
             self.isTracking = true
-            self.planeDetectionStatus = "ready".localized
+            self.planeDetectionStatus = "Ready"
         case .limited(let reason):
             self.isTracking = false
             
             switch reason {
             case .excessiveMotion:
-                self.planeDetectionStatus = "tracking_excessive_motion".localized
+                self.planeDetectionStatus = "Moving too fast"
             case .insufficientFeatures:
-                self.planeDetectionStatus = "tracking_insufficient_features".localized
+                self.planeDetectionStatus = "Not enough features in view"
             case .initializing:
-                self.planeDetectionStatus = "tracking_initializing".localized
+                self.planeDetectionStatus = "Initializing..."
             case .relocalizing:
-                self.planeDetectionStatus = "tracking_relocalizing".localized
+                self.planeDetectionStatus = "Determining location..."
             @unknown default:
-                self.planeDetectionStatus = "tracking_unknown_limitation".localized
+                self.planeDetectionStatus = "Unknown limitation"
             }
         case .notAvailable:
             self.isTracking = false
-            self.planeDetectionStatus = "tracking_unavailable".localized
+            self.planeDetectionStatus = "Tracking unavailable"
         @unknown default:
             self.isTracking = false
-            self.planeDetectionStatus = "tracking_unknown_state".localized
+            self.planeDetectionStatus = "Unknown state"
         }
     }
     
-    // Update localized strings when language changes
-    private func updateLocalizedStrings() {
-        // Update status message based on current tracking state
-        updateTrackingStatus()
-    }
 }
 
 // MARK: - ARSessionDelegate
@@ -248,21 +236,21 @@ extension ARViewModel: ARSessionDelegate {
     
     func session(_ session: ARSession, didFailWithError error: Error) {
         DispatchQueue.main.async {
-            self.planeDetectionStatus = "ar_session_error".localized(with: error.localizedDescription)
+            self.planeDetectionStatus = "AR session error: \(error.localizedDescription)"
             self.isTracking = false
         }
     }
     
     func sessionWasInterrupted(_ session: ARSession) {
         DispatchQueue.main.async {
-            self.planeDetectionStatus = "ar_session_interrupted".localized
+            self.planeDetectionStatus = "AR session interrupted"
             self.isTracking = false
         }
     }
     
     func sessionInterruptionEnded(_ session: ARSession) {
         DispatchQueue.main.async {
-            self.planeDetectionStatus = "ar_session_resumed".localized
+            self.planeDetectionStatus = "AR session resumed"
             self.resetARSession()
         }
     }

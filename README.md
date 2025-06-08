@@ -1,242 +1,223 @@
-# ARMeter - Arttırılmış Gerçeklik Ölçüm Uygulaması
+# ARMeter - Augmented Reality Measurement App
 
 ![ARMeter Logo](ARMeter/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png)
 
-ARMeter, iOS cihazlarında ARKit kullanarak gerçek dünyada mesafeleri ölçmenizi sağlayan bir arttırılmış gerçeklik uygulamasıdır. Kullanıcı dostu arayüzü ve çeşitli ölçüm birimleri ile hızlı ve hassas ölçümler yapabilirsiniz.
+ARMeter is an augmented reality application that allows you to measure distances in the real world using ARKit on iOS devices. With its user-friendly interface and various measurement units, you can make quick and accurate measurements.
 
-## İçindekiler
+## Table of Contents
 
-- [Özellikler](#özellikler)
-- [Sistem Gereksinimleri](#sistem-gereksinimleri)
-- [Kurulum](#kurulum)
-- [Kullanım](#kullanım)
-- [Proje Yapısı](#proje-yapısı)
-- [Mimari](#mimari)
-- [Kodlama Yaklaşımı](#kodlama-yaklaşımı)
-- [Performans Optimizasyonları](#performans-optimizasyonları)
-- [Çoklu Dil Desteği](#çoklu-dil-desteği)
-- [Geliştirme Süreci](#geliştirme-süreci)
-- [Gelecekteki Özellikler](#gelecekteki-özellikler)
-- [Lisans](#lisans)
+- [Features](#features)
+- [System Requirements](#system-requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Architecture](#architecture)
+- [Coding Approach](#coding-approach)
+- [Performance Optimizations](#performance-optimizations)
+- [Development Process](#development-process)
+- [Future Features](#future-features)
+- [License](#license)
 
-## Özellikler
+## Features
 
-- **Hassas Ölçüm**: ARKit ile yüzey tespiti ve gerçek dünyada hassas mesafe ölçümü
-- **Çoklu Ölçüm Birimi**: Metre, santimetre, inç ve fit cinsinden ölçümler
-- **Ölçüm Kaydı**: Yapılan ölçümleri kaydedebilme ve not ekleyebilme
-- **Görsel Geri Bildirim**: Başlangıç ve bitiş noktaları, ölçüm çizgileri ve mesafe etiketleri
-- **Haptik Geri Bildirim**: Dokunsal geri bildirimler ile daha iyi kullanıcı deneyimi
-- **Çoklu Dil Desteği**: İngilizce ve Türkçe dil desteği
-- **Başlangıç Rehberi**: Uygulama ilk açıldığında kullanıcıyı yönlendiren başlangıç ekranı
-- **Ayarlar**: Kişiselleştirilebilir ayarlar (haptic geri bildirim, kılavuz noktaları, dil seçimi)
-- **Metal Optimizasyonu**: Metal API ile geliştirilmiş performans
-- **AR Yüzey Algılama**: Yatay ve dikey yüzeylerin otomatik algılanması
+- **Precise Measurement**: Surface detection with ARKit and accurate distance measurement in the real world
+- **Multiple Measurement Units**: Measurements in meters, centimeters, inches, and feet
+- **Measurement Recording**: Ability to save measurements and add notes
+- **Visual Feedback**: Start and end points, measurement lines, and distance labels
+- **Haptic Feedback**: Better user experience with tactile feedback
+- **Onboarding Guide**: Introductory screen that guides users when the app is first opened
+- **Settings**: Customizable settings (haptic feedback, guide points)
+- **Metal Optimization**: Enhanced performance with Metal API
+- **AR Surface Detection**: Automatic detection of horizontal and vertical surfaces
 
-## Sistem Gereksinimleri
+## System Requirements
 
-- iOS 15.0 veya üzeri
-- ARKit destekleyen bir iOS cihazı (iPhone/iPad)
-- Kamera erişimi
-- İnternet bağlantısı gerektirmez (tamamen offline çalışır)
+- iOS 16.0 or later
+- An iOS device that supports ARKit (iPhone/iPad)
+- Camera access
+- No internet connection required (works completely offline)
 
-## Kurulum
+## Installation
 
-1. Projeyi klonlayın veya indirin:
+1. Clone or download the project:
    ```bash
    git clone https://github.com/yourusername/ARMeter.git
    ```
 
-2. Xcode'da projeyi açın:
+2. Open the project in Xcode:
    ```bash
    cd ARMeter
    open ARMeter.xcodeproj
    ```
 
-3. Uygulamayı bir cihaza veya simülatöre derleyin ve çalıştırın:
-   - Xcode'da uygun bir hedef cihaz seçin
-   - Run butonuna tıklayın veya `Cmd+R` tuşlarına basın
+3. Build and run the app on a device or simulator:
+   - Select an appropriate target device in Xcode
+   - Click the Run button or press `Cmd+R`
 
-> Not: ARKit işlevselliği için gerçek bir iOS cihazda test edilmesi önerilir. Simülatörde AR özellikleri tam olarak çalışmaz.
+> Note: For ARKit functionality, it is recommended to test on a real iOS device. AR features do not work fully in the simulator.
 
-## Kullanım
+## Usage
 
-### İlk Kullanım
+### First Use
 
-1. Uygulamayı ilk kez açtığınızda, başlangıç rehberi ile karşılaşacaksınız.
-2. Kamera izinlerini onaylayın.
-3. Rehberlik adımlarını takip ederek uygulamanın temel işlevlerini öğrenin.
-4. "Başla" butonuna tıklayarak ana ölçüm ekranına geçin.
+1. When you open the app for the first time, you will encounter the onboarding guide.
+2. Approve camera permissions.
+3. Follow the guidance steps to learn the basic functions of the app.
+4. Click the "Start" button to go to the main measurement screen.
 
-### Ölçüm Yapma
+### Making Measurements
 
-1. Cihazınızı yatay veya dikey bir yüzeye doğru tutun.
-2. Yüzeylerin tespit edilmesini bekleyin (ekranın üst kısmında durum mesajı göreceksiniz).
-3. Ortadaki büyük ölçüm butonuna tıklayın.
-4. Başlangıç noktasını seçmek için ekrana dokunun (yeşil bir nokta görünecek).
-5. Bitiş noktasını seçmek için başka bir konuma dokunun (kırmızı bir nokta görünecek).
-6. İki nokta arasındaki mesafe otomatik olarak hesaplanacak ve gösterilecektir.
-7. Ölçümü kaydetmek için "Kaydet" butonuna tıklayın.
-8. İsteğe bağlı olarak bir not ekleyebilirsiniz.
+1. Point your device toward a horizontal or vertical surface.
+2. Wait for surfaces to be detected (you will see a status message at the top of the screen).
+3. Click the large measurement button in the center.
+4. Touch the screen to select the start point (a green dot will appear).
+5. Touch another location to select the end point (a red dot will appear).
+6. The distance between the two points will be automatically calculated and displayed.
+7. Click the "Save" button to save the measurement.
+8. Optionally add a note.
 
-### Ölçüm Birimi Değiştirme
+### Changing Measurement Units
 
-1. Ekranın alt kısmındaki cetvel simgesine tıklayın.
-2. Açılan menüden istediğiniz ölçüm birimini seçin (m, cm, inç, fit).
-3. Mevcut ve gelecekteki tüm ölçümler seçilen birimde gösterilecektir.
+1. Click the ruler icon at the bottom of the screen.
+2. Select your desired measurement unit from the menu (m, cm, in, ft).
+3. All current and future measurements will be displayed in the selected unit.
 
-### Ölçüm Geçmişi
+### Measurement History
 
-1. Ekranın alt kısmındaki saat simgesine tıklayın.
-2. Kaydedilen tüm ölçümleri ve notları görüntüleyin.
-3. Ölçümleri silmek için "Düzenle" butonuna tıklayın.
+1. Click the clock icon at the bottom of the screen.
+2. View all saved measurements and notes.
+3. Click the "Edit" button to delete measurements.
 
-### Ayarlar
+### Settings
 
-1. Ekranın sağ tarafındaki dişli simgesine tıklayın.
-2. Haptik geri bildirimi açın/kapatın.
-3. Kılavuz noktalarını açın/kapatın.
-4. Dil seçimini değiştirin.
-5. Uygulama hakkında bilgi alın.
+1. Click the gear icon on the right side of the screen.
+2. Turn haptic feedback on/off.
+3. Turn guide points on/off.
+4. Get information about the app.
 
-## Proje Yapısı
+## Project Structure
 
-ARMeter projesi, MVVM mimari modeli takip ederek modüler bir şekilde yapılandırılmıştır:
+The ARMeter project is structured modularly following the MVVM architectural pattern:
 
 ```
 ARMeter/
-├── ARMeterApp.swift          # Uygulama başlangıç noktası
-├── ContentView.swift         # Ana içerik görünümü
-├── Info.plist                # Uygulama yapılandırma bilgileri
-├── Models/                   # Veri modelleri
-│   └── MeasurementModel.swift # Ölçüm veri modeli
-├── ViewModels/               # Görünüm modelleri
-│   ├── AppViewModel.swift    # Uygulama durumu ve işlemleri
-│   └── ARViewModel.swift     # AR işlemleri ve durumu
-├── Views/                    # Kullanıcı arayüzü görünümleri
-│   ├── MainView.swift        # Ana görünüm
-│   ├── MeasurementView.swift # Ölçüm ekranı
-│   └── OnboardingView.swift  # Başlangıç ekranı
-├── Utils/                    # Yardımcı sınıflar
-│   ├── HapticManager.swift   # Dokunsal geri bildirim yöneticisi
-│   ├── LocalizationManager.swift # Yerelleştirme yöneticisi
-│   ├── MaterialConfigurator.swift # AR malzeme yapılandırıcısı
-│   └── StringExtension.swift # String uzantıları
-└── Resources/                # Kaynaklar
-    ├── Localization/         # Yerelleştirme dosyaları
-    │   ├── en.lproj/         # İngilizce
-    │   └── tr.lproj/         # Türkçe
-    └── Shaders/              # Metal gölgelendiriciler
-        └── ShaderConfig.metal # Metal yapılandırma
+├── ARMeterApp.swift          # Application entry point
+├── ContentView.swift         # Main content view
+├── Info.plist                # Application configuration information
+├── Models/                   # Data models
+│   └── MeasurementModel.swift # Measurement data model
+├── ViewModels/               # View models
+│   ├── AppViewModel.swift    # Application state and operations
+│   └── ARViewModel.swift     # AR operations and state
+├── Views/                    # User interface views
+│   ├── MainView.swift        # Main view
+│   ├── MeasurementView.swift # Measurement screen
+│   └── OnboardingView.swift  # Onboarding screen
+├── Utils/                    # Helper classes
+│   ├── HapticManager.swift   # Haptic feedback manager
+│   └── MaterialConfigurator.swift # AR material configurator
+└── Resources/                # Resources
+    └── Shaders/              # Metal shaders
+        └── ShaderConfig.metal # Metal configuration
 ```
 
-## Mimari
+## Architecture
 
-ARMeter, MVVM (Model-View-ViewModel) mimari modelini kullanarak geliştirilmiştir:
+ARMeter is developed using the MVVM (Model-View-ViewModel) architectural pattern:
 
-### Model Katmanı
+### Model Layer
 
-- **MeasurementModel.swift**: Ölçüm sonuçlarını, birimlerini ve diğer ilişkili verileri tanımlayan model.
-- Kullanıcı ölçümlerini ve uygulama durumunu kalıcı olarak saklama.
+- **MeasurementModel.swift**: Model defining measurement results, units, and other related data.
+- Persistent storage of user measurements and application state.
 
-### View Katmanı
+### View Layer
 
-- **MainView.swift**: Uygulamanın ana yapısını ve gezinme akışını yöneten üst düzey görünüm.
-- **MeasurementView.swift**: AR ölçüm arayüzünü, ölçüm kontrol panellerini ve kullanıcı etkileşimlerini içerir.
-- **OnboardingView.swift**: İlk defa uygulama kullananlar için rehberlik ekranı.
-- SwiftUI ile oluşturulmuş modüler alt görünümler (`UnitPickerView`, `SettingsView`, vb.).
+- **MainView.swift**: Top-level view managing the main structure and navigation flow of the application.
+- **MeasurementView.swift**: Contains AR measurement interface, measurement control panels, and user interactions.
+- **OnboardingView.swift**: Guidance screen for first-time app users.
+- Modular sub-views created with SwiftUI (`UnitPickerView`, `SettingsView`, etc.).
 
-### ViewModel Katmanı
+### ViewModel Layer
 
-- **AppViewModel.swift**: Uygulama durumunu, ölçüm işlemlerini, kullanıcı ayarlarını ve uygulama akışını yönetir.
-- **ARViewModel.swift**: ARKit etkileşimleri, kamera işlemleri, yüzey algılama ve AR sahnesini yönetir.
+- **AppViewModel.swift**: Manages application state, measurement operations, user settings, and application flow.
+- **ARViewModel.swift**: Manages ARKit interactions, camera operations, surface detection, and AR scene.
 
-### Yardımcı Bileşenler
+### Helper Components
 
-- **LocalizationManager**: Çoklu dil desteği ve yerelleştirme işlemleri.
-- **HapticManager**: Dokunsal geri bildirim işlemleri.
-- **MaterialConfigurator**: AR nesneleri için malzeme yapılandırması.
+- **HapticManager**: Haptic feedback operations.
+- **MaterialConfigurator**: Material configuration for AR objects.
 
-## Kodlama Yaklaşımı
+## Coding Approach
 
-ARMeter projesinde benimsenen kodlama yaklaşımları:
+Coding approaches adopted in the ARMeter project:
 
-### Reaktif Programlama
+### Reactive Programming
 
-- **@Published** özellikleri ve Combine çerçevesi ile reaktif veri akışı.
-- State değişikliklerine dayalı arayüz güncellemeleri.
+- Reactive data flow with **@Published** properties and Combine framework.
+- Interface updates based on state changes.
 
 ### Protocol-Oriented Programming
 
-- Protokoller ve uzantılar aracılığıyla kod yeniden kullanımı ve modülerlik.
-- İşlevselliğin, belirli arayüzler üzerinden tanımlanması.
+- Code reuse and modularity through protocols and extensions.
+- Definition of functionality through specific interfaces.
 
-### Performans Optimizasyonu
+### Performance Optimization
 
-- Metal API ile yüksek performanslı grafik işleme.
-- İş parçacığı yönetimi ile UI blokajlarının önlenmesi.
-- ARKit kaynaklarının verimli kullanımı.
+- High-performance graphics processing with Metal API.
+- Thread management to prevent UI blocking.
+- Efficient use of ARKit resources.
 
 ### Memory Management
 
-- Zayıf referanslar ve bellek sızıntılarının önlenmesi.
-- Autoreleasepool ile geçici bellek kullanımının optimize edilmesi.
+- Prevention of weak references and memory leaks.
+- Optimization of temporary memory usage with autoreleasepool.
 
-## Performans Optimizasyonları
+## Performance Optimizations
 
-ARMeter, optimize edilmiş bir kullanıcı deneyimi için çeşitli tekniklerden yararlanır:
+ARMeter utilizes various techniques for an optimized user experience:
 
-### AR Optimizasyonları
+### AR Optimizations
 
-- **Seçici Özellik Kullanımı**: Sadece gerekli ARKit özellikleri etkinleştirilmiştir.
-- **Kademeli AR Başlatma**: AR oturumu, minimum yapılandırma ile başlar ve kademeli olarak geliştirilir.
-- **AR Çerçeve Yönetimi**: Çerçevelerin gereksiz tutulması önlenerek bellek kullanımı optimize edilmiştir.
+- **Selective Feature Usage**: Only necessary ARKit features are enabled.
+- **Gradual AR Startup**: AR session starts with minimal configuration and is gradually enhanced.
+- **AR Frame Management**: Memory usage is optimized by preventing unnecessary retention of frames.
 
-### Grafik Optimizasyonları
+### Graphics Optimizations
 
-- **Basit Geometriler**: Ölçüm noktaları ve çizgiler için optimize edilmiş geometriler.
-- **Metal Entegrasyonu**: Doğrudan Metal API çağrıları ile grafik işleme.
-- **Basit Malzemeler**: Karmaşık malzemeler yerine basit, düşük maliyetli olanları tercih edilmiştir.
+- **Simple Geometries**: Optimized geometries for measurement points and lines.
+- **Metal Integration**: Graphics processing with direct Metal API calls.
+- **Simple Materials**: Simple, low-cost materials are preferred over complex ones.
 
-### UI Optimizasyonları
+### UI Optimizations
 
-- **Asenkron İşlemler**: Arka planda gerçekleştirilen hesaplamalar ve işlemler.
-- **İş Parçacığı Yönetimi**: UI blokajlarını önlemek için işlemler uygun iş parçacıklarında yürütülür.
-- **Dokunmatik Olay Optimizasyonu**: Dokunma olaylarının işlenme şekli optimize edilmiştir.
+- **Asynchronous Operations**: Calculations and operations performed in the background.
+- **Thread Management**: Operations are executed on appropriate threads to prevent UI blocking.
+- **Touch Event Optimization**: The way touch events are processed is optimized.
 
-## Çoklu Dil Desteği
+## Development Process
 
-ARMeter şu anda aşağıdaki dilleri desteklemektedir:
+When developing with this project:
 
-- İngilizce (varsayılan)
-- Türkçe
+1. **Build the project**: Use Xcode to build and run
+2. **Test on device**: ARKit features require a physical iOS device
+3. **Follow MVVM**: Maintain the established architectural patterns
+4. **Optimize for AR**: Be mindful of ARKit performance considerations
 
-Dil desteği, LocalizationManager sınıfı ve Localizable.strings dosyaları aracılığıyla sağlanmaktadır:
+## Future Features
 
-```swift
-// Örnek kullanım
-Text("place_start_point".localized)
-```
+Planned future features for ARMeter:
 
-Yeni dil eklemek için:
+- **Multiple Measurement Points**: Area and volume measurement with multiple points.
+- **LiDAR Integration**: Use of LiDAR sensor for more accurate measurements on supported devices.
+- **Measurement Sharing**: Sharing measurements as AR experience or images.
+- **Area Scanning**: Creating detailed 3D models by scanning an area.
+- **Template Measurements**: Pre-defined measurement templates for common objects.
+- **Voice Commands**: Ability to perform measurement operations with voice commands.
 
-1. Resources/Localization altında yeni bir dil klasörü oluşturun (örn. `fr.lproj`).
-2. Bu klasöre standart bir `Localizable.strings` dosyası ekleyin.
-3. Anahtar/değer çiftlerini yeni dile çevirin.
-4. LocalizationManager'a yeni dil seçeneğini ekleyin.
+## License
 
-## Gelecekteki Özellikler
+The ARMeter project is licensed under a Non-Commercial license. This license allows the software to be used, modified, and distributed free of charge for non-commercial purposes, while requiring explicit written permission from the copyright holder for commercial use. See the `LICENSE` file for more information.
 
-ARMeter için planlanan gelecekteki özellikler:
+---
 
-- **Çoklu Ölçüm Noktaları**: Birden fazla nokta ile alan ve hacim ölçümü.
-- **LiDAR Entegrasyonu**: Destekleyen cihazlarda daha hassas ölçümler için LiDAR sensörü kullanımı.
-- **Ölçüm Paylaşımı**: Ölçümleri AR deneyimi veya görüntü olarak paylaşma.
-- **Bölge Taraması**: Bir alanı tarayarak detaylı 3D model oluşturma.
-- **Daha Fazla Dil Desteği**: Ek diller için yerelleştirme desteği.
-- **Şablon Ölçümler**: Yaygın nesneler için ön tanımlı ölçüm şablonları.
-- **Sesli Komutlar**: Sesli komut ile ölçüm işlemlerini yapabilme.
-
-## Lisans
-
-ARMeter projesi, ticari olmayan (Non-Commercial) lisans altında lisanslanmıştır. Bu lisans, yazılımın ticari olmayan amaçlarla ücretsiz olarak kullanılmasına, değiştirilmesine ve dağıtılmasına izin verirken, ticari kullanım için telif hakkı sahibinden açık yazılı izin gerektirir. Daha fazla bilgi için `LICENSE` dosyasına bakın.
-
+© 2025 Emre Argana. All rights reserved.

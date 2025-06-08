@@ -46,8 +46,6 @@ class AppViewModel: ObservableObject {
     private var arView: ARView?
     private var anchors: [AnchorEntity] = []
     
-    // Localization manager
-    @Published var localizationManager = LocalizationManager.shared
     
     // Combiners
     private var cancellables = Set<AnyCancellable>()
@@ -59,13 +57,6 @@ class AppViewModel: ObservableObject {
         // Check onboarding status
         checkOnboardingStatus()
         
-        // Listen for language changes
-        NotificationCenter.default.publisher(for: Notification.Name("LanguageChanged"))
-            .sink { [weak self] _ in
-                // Refresh UI when language changes
-                self?.objectWillChange.send()
-            }
-            .store(in: &cancellables)
     }
     
     // MARK: - State Management
@@ -101,8 +92,8 @@ class AppViewModel: ObservableObject {
     
     private func checkARCapabilities() {
         guard ARWorldTrackingConfiguration.isSupported else {
-            arError = LocalizationManager.shared.localizedString(for: "ARKit is not supported")
-            appState = .error(LocalizationManager.shared.localizedString(for: "This device does not have the necessary hardware for ARKit applications."))
+            arError = "ARKit is not supported"
+            appState = .error("This device does not have the necessary hardware for ARKit applications.")
             return
         }
         
@@ -455,8 +446,4 @@ class AppViewModel: ObservableObject {
         saveUserPreferences()
     }
     
-    // MARK: - Language Management
-    func setLanguage(_ languageCode: String) {
-        localizationManager.setAppLanguage(languageCode)
-    }
 }

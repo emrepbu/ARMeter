@@ -15,29 +15,29 @@ struct OnboardingView: View {
     private var pages: [OnboardingPage] {
         return [
             OnboardingPage(
-                title: "welcome_title".localized,
-                description: "welcome_description".localized,
+                title: "Welcome to ARMeter",
+                description: "The easiest way to measure in the real world using augmented reality technology.",
                 imageName: "ruler.fill",
                 backgroundColor: .blue
             ),
             
             OnboardingPage(
-                title: "simple_measurements_title".localized,
-                description: "simple_measurements_description".localized,
+                title: "Simple and Accurate Measurements",
+                description: "Measuring the distance between two points has never been easier. Just tap on the screen to mark the start and end points.",
                 imageName: "arrow.left.and.right",
                 backgroundColor: .green
             ),
             
             OnboardingPage(
-                title: "save_measurements_title".localized,
-                description: "save_measurements_description".localized,
+                title: "Save Measurements",
+                description: "You can save your measurements with notes and refer to them later.",
                 imageName: "square.and.arrow.down",
                 backgroundColor: .orange
             ),
             
             OnboardingPage(
-                title: "multiple_units_title".localized,
-                description: "multiple_units_description".localized,
+                title: "Multiple Units",
+                description: "You can switch between meters, centimeters, inches, or feet according to your needs.",
                 imageName: "ruler",
                 backgroundColor: .purple
             )
@@ -104,7 +104,7 @@ struct OnboardingView: View {
                         }
                     }) {
                         HStack {
-                            Text(currentPage < pages.count - 1 ? "next".localized : "start".localized)
+                            Text(currentPage < pages.count - 1 ? "Next" : "Start")
                                 .fontWeight(.bold)
                             
                             Image(systemName: "arrow.right")
@@ -128,7 +128,7 @@ struct OnboardingView: View {
                     Button(action: {
                         appViewModel.completeOnboarding()
                     }) {
-                        Text("skip".localized)
+                        Text("Skip")
                             .fontWeight(.medium)
                             .foregroundColor(.white)
                             .padding(10)
@@ -140,32 +140,6 @@ struct OnboardingView: View {
                 Spacer()
             }
             
-            // Language selection button
-            VStack {
-                HStack {
-                    Button(action: {
-                        // Toggle between languages
-                        let newLang = appViewModel.localizationManager.currentLanguage == "en" ? "tr" : "en"
-                        appViewModel.setLanguage(newLang)
-                    }) {
-                        HStack {
-                            Image(systemName: "globe")
-                            Text(appViewModel.localizationManager.currentLanguageName)
-                        }
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(Color.black.opacity(0.3))
-                        .cornerRadius(8)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 60)
-                
-                Spacer()
-            }
         }
     }
 }
