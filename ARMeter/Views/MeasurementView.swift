@@ -21,7 +21,7 @@ struct MeasurementView: View {
     
     var body: some View {
         ZStack {
-            // AR View
+            // AR View - always show for camera feed
             ARViewContainer()
                 .edgesIgnoringSafeArea(.all)
                 .environmentObject(appViewModel)
@@ -31,7 +31,10 @@ struct MeasurementView: View {
             VStack {
                 Spacer()
                 
-                if appViewModel.appState == .ready {
+                if appViewModel.appState == .ready ||
+                   appViewModel.appState == .measuring ||
+                   appViewModel.appState == .placingStartPoint ||
+                   appViewModel.appState == .placingEndPoint {
                     bottomControlPanel
                 }
             }
@@ -40,7 +43,10 @@ struct MeasurementView: View {
             HStack {
                 Spacer()
                 
-                if appViewModel.appState == .ready {
+                if appViewModel.appState == .ready ||
+                   appViewModel.appState == .measuring ||
+                   appViewModel.appState == .placingStartPoint ||
+                   appViewModel.appState == .placingEndPoint {
                     sideControlPanel
                 }
             }
@@ -81,17 +87,30 @@ struct MeasurementView: View {
             
             Spacer()
             
-            // Start Measurement Button
+            // Start/Stop Measurement Button
             Button(action: {
-                appViewModel.startMeasuring()
+                if appViewModel.appState == .measuring ||
+                   appViewModel.appState == .placingStartPoint ||
+                   appViewModel.appState == .placingEndPoint {
+                    appViewModel.clearCurrentMeasurement()
+                    arViewModel.resetARSession()
+                } else {
+                    appViewModel.startMeasuring()
+                }
             }) {
                 ZStack {
                     Circle()
-                        .fill(Color(UIColor.blue))
+                        .fill(appViewModel.appState == .measuring ||
+                              appViewModel.appState == .placingStartPoint ||
+                              appViewModel.appState == .placingEndPoint ? 
+                              Color(UIColor.red) : Color(UIColor.blue))
                         .frame(width: 70, height: 70)
                         .shadow(radius: 5)
                     
-                    Image(systemName: "ruler.fill")
+                    Image(systemName: appViewModel.appState == .measuring ||
+                          appViewModel.appState == .placingStartPoint ||
+                          appViewModel.appState == .placingEndPoint ? 
+                          "stop.fill" : "ruler.fill")
                         .font(.system(size: 30))
                         .foregroundColor(.white)
                 }
@@ -138,21 +157,40 @@ struct MeasurementView: View {
                     .cornerRadius(10)
             }
             
-            // Reset AR Session
-            Button(action: {
-                arViewModel.resetARSession()
-            }) {
-                Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 22))
-                    .frame(width: 50, height: 50)
-                    .background(Color(UIColor.black).opacity(0.7))
-                    .foregroundColor(Color.white)
-                    .cornerRadius(10)
+            // Stop/Reset Measurement (only show during measurement)
+            if appViewModel.appState == .measuring ||
+               appViewModel.appState == .placingStartPoint ||
+               appViewModel.appState == .placingEndPoint {
+                
+                Button(action: {
+                    appViewModel.clearCurrentMeasurement()
+                    arViewModel.resetARSession()
+                }) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 22))
+                        .frame(width: 50, height: 50)
+                        .background(Color(UIColor.orange).opacity(0.8))
+                        .foregroundColor(Color.white)
+                        .cornerRadius(10)
+                }
+            } else {
+                // Clear All AR Measurements (when not measuring)
+                Button(action: {
+                    appViewModel.removeAllAnchors()
+                    arViewModel.resetARSession()
+                }) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 22))
+                        .frame(width: 50, height: 50)
+                        .background(Color(UIColor.black).opacity(0.7))
+                        .foregroundColor(Color.white)
+                        .cornerRadius(10)
+                }
             }
             
             // Help Button
             Button(action: {
-                appViewModel.isShowingMeasurementTutorial = true
+                appViewModel.appState = .onboarding
             }) {
                 Image(systemName: "questionmark")
                     .font(.system(size: 22))
@@ -174,10 +212,6 @@ struct ARViewContainer: UIViewRepresentable {
     func makeUIView(context: Context) -> ARView {
         let arView = ARView(frame: .zero)
         
-        // Setup and start AR view
-        arViewModel.setupARView(arView)
-        appViewModel.startSession(arView: arView)
-        
         // Add tap gesture recognizer
         let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         arView.addGestureRecognizer(tapGesture)
@@ -191,7 +225,15 @@ struct ARViewContainer: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: ARView, context: Context) {
-        // When SwiftUI view updates - avoid direct state changes here
+        // Start AR session only when user starts measuring and session not already running
+        if (appViewModel.appState == .measuring ||
+            appViewModel.appState == .placingStartPoint ||
+            appViewModel.appState == .placingEndPoint ||
+            appViewModel.appState == .reviewing) && !arViewModel.isTracking {
+            
+            arViewModel.setupARView(uiView)
+            appViewModel.startSession(arView: uiView)
+        }
     }
     
     // Helper function to find UIScrollView in view hierarchy
@@ -353,15 +395,6 @@ struct SettingsView: View {
                         }
                 }
                 
-                Section {
-                    Button(action: {
-                        appViewModel.isShowingMeasurementTutorial = true
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Label("Show Tutorial", systemImage: "questionmark.circle")
-                    }
-                    
-                }
                 
                 Section {
                     HStack {

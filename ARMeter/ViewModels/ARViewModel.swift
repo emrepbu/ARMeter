@@ -67,10 +67,10 @@ class ARViewModel: NSObject, ObservableObject {
     // MARK: - AR Session Management
     
     func setupARView(_ view: ARView) {
-        // Defer @Published property update to avoid view update conflicts
-        DispatchQueue.main.async { [weak self] in
-            self?.arView = view
-        }
+        // Prevent multiple setups of the same ARView
+        guard arView !== view else { return }
+        
+        self.arView = view
         
         // Optimize AR View
         view.renderOptions = [.disablePersonOcclusion, .disableMotionBlur, .disableFaceMesh]
@@ -101,13 +101,18 @@ class ARViewModel: NSObject, ObservableObject {
         // Setup coaching overlay (user guidance)
         setupCoachingOverlay(for: view)
         
-        // Configure AR view properties
-        #if DEBUG
-        view.debugOptions = [.showFeaturePoints]
-        #endif
+        // Configure AR view properties - will be updated based on settings
         
         // Keep ambient light estimation simple
         view.environment.lighting.intensityExponent = 1
+    }
+    
+    func updateDebugOptions(for view: ARView, showGuidePoints: Bool) {
+        if showGuidePoints {
+            view.debugOptions = [.showFeaturePoints, .showAnchorOrigins]
+        } else {
+            view.debugOptions = []
+        }
     }
     
     func resetARSession() {
@@ -126,7 +131,7 @@ class ARViewModel: NSObject, ObservableObject {
     private func setupCoachingOverlay(for view: ARView) {
         let coachingOverlay = ARCoachingOverlayView()
         coachingOverlay.session = view.session
-        coachingOverlay.goal = .horizontalPlane
+        coachingOverlay.goal = .tracking
         coachingOverlay.activatesAutomatically = true
         
         coachingOverlay.translatesAutoresizingMaskIntoConstraints = false

@@ -56,8 +56,8 @@ enum MeasurementUnit: String, CaseIterable, Codable {
 /// Enum defining application state
 enum AppState: Equatable {
     case onboarding
-    case measuring
     case ready
+    case measuring
     case placingStartPoint
     case placingEndPoint
     case reviewing

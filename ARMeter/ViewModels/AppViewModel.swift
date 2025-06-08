@@ -74,6 +74,9 @@ class AppViewModel: ObservableObject {
     // MARK: - State Management
     
     func startSession(arView: ARView) {
+        // Prevent multiple sessions from starting
+        guard self.arView !== arView else { return }
+        
         self.arView = arView
         self.arSession = arView.session
         
@@ -103,8 +106,7 @@ class AppViewModel: ObservableObject {
         
         // Defer @Published property update to avoid view update conflicts
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.appState = self.hasCompletedOnboarding ? .ready : .onboarding
+            self?.appState = .ready
         }
     }
     
@@ -126,25 +128,17 @@ class AppViewModel: ObservableObject {
     
     func checkOnboardingStatus() {
         // Check if the user has completed onboarding
-        // Defer @Published property update to avoid view update conflicts
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            if self.hasCompletedOnboarding {
-                self.appState = .ready
-            } else {
-                self.appState = .onboarding
-            }
+        if hasCompletedOnboarding {
+            appState = .ready
+        } else {
+            appState = .onboarding
         }
     }
     
     func completeOnboarding() {
         hasCompletedOnboarding = true
         saveUserPreferences()
-        
-        // Defer @Published property update to avoid view update conflicts
-        DispatchQueue.main.async { [weak self] in
-            self?.appState = .ready
-        }
+        appState = .ready
     }
     
     // MARK: - Measurement Operations
@@ -154,7 +148,25 @@ class AppViewModel: ObservableObject {
         
         // Defer @Published property update to avoid view update conflicts
         DispatchQueue.main.async { [weak self] in
+            self?.appState = .measuring // This will trigger AR session to start
+        }
+        
+        // After a short delay, transition to placing start point
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.appState = .placingStartPoint
+        }
+    }
+    
+    func stopMeasuring() {
+        // Clear any current measurement and return to ready state
+        clearCurrentMeasurement()
+        
+        // Stop AR session
+        arSession?.pause()
+        
+        // Defer @Published property update to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            self?.appState = .ready
         }
     }
     
@@ -383,7 +395,7 @@ class AppViewModel: ObservableObject {
         self.anchors.append(anchor)
     }
     
-    private func removeAllAnchors() {
+    func removeAllAnchors() {
         guard let arView = arView else { return }
         
         // Remove anchors on the main thread to avoid threading issues
@@ -401,6 +413,20 @@ class AppViewModel: ObservableObject {
                     scene.removeAnchor(anchor)
                 }
             }
+        }
+    }
+    
+    func restoreAllMeasurements() {
+        guard arView != nil else { return }
+        
+        // Restore all saved measurements as AR anchors
+        for measurement in measurements {
+            // Add start point
+            addPointAnchor(at: measurement.startPoint, color: UIColor.green)
+            // Add end point
+            addPointAnchor(at: measurement.endPoint, color: UIColor.red)
+            // Add line
+            addLineAnchor(from: measurement.startPoint, to: measurement.endPoint)
         }
     }
     
@@ -503,6 +529,15 @@ class AppViewModel: ObservableObject {
     func toggleGuidePoints() {
         showGuidePoints.toggle()
         saveUserPreferences()
+        
+        // Update AR view debug options immediately
+        if let arView = arView {
+            if showGuidePoints {
+                arView.debugOptions = [.showFeaturePoints, .showAnchorOrigins]
+            } else {
+                arView.debugOptions = []
+            }
+        }
     }
     
 }
