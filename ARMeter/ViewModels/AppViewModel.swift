@@ -50,21 +50,11 @@ class AppViewModel: ObservableObject {
     private static let cachedMaterials: [String: SimpleMaterial] = {
         var materials: [String: SimpleMaterial] = [:]
         
-        do {
-            materials["greenPoint"] = try SimpleMaterial(color: UIColor.green, roughness: 0.7, isMetallic: false)
-            materials["redPoint"] = try SimpleMaterial(color: UIColor.red, roughness: 0.7, isMetallic: false)
-            materials["line"] = try SimpleMaterial(color: UIColor.blue, roughness: 0.7, isMetallic: false)
-            materials["textLabel"] = try SimpleMaterial(color: UIColor.white, roughness: 0.8, isMetallic: false)
-            materials["textBackground"] = try SimpleMaterial(color: UIColor(red: 0, green: 0, blue: 0, alpha: 0.6), roughness: 0.8, isMetallic: false)
-        } catch {
-            print("Failed to create cached materials: \(error)")
-            // Fallback: Create basic materials without try-catch for essential functionality
-            materials["greenPoint"] = SimpleMaterial(color: UIColor.green, roughness: 0.7, isMetallic: false)
-            materials["redPoint"] = SimpleMaterial(color: UIColor.red, roughness: 0.7, isMetallic: false)
-            materials["line"] = SimpleMaterial(color: UIColor.blue, roughness: 0.7, isMetallic: false)
-            materials["textLabel"] = SimpleMaterial(color: UIColor.white, roughness: 0.8, isMetallic: false)
-            materials["textBackground"] = SimpleMaterial(color: UIColor(red: 0, green: 0, blue: 0, alpha: 0.6), roughness: 0.8, isMetallic: false)
-        }
+        materials["greenPoint"] = SimpleMaterial(color: UIColor.green, roughness: 0.7, isMetallic: false)
+        materials["redPoint"] = SimpleMaterial(color: UIColor.red, roughness: 0.7, isMetallic: false)
+        materials["line"] = SimpleMaterial(color: UIColor.blue, roughness: 0.7, isMetallic: false)
+        materials["textLabel"] = SimpleMaterial(color: UIColor.white, roughness: 0.8, isMetallic: false)
+        materials["textBackground"] = SimpleMaterial(color: UIColor(red: 0, green: 0, blue: 0, alpha: 0.6), roughness: 0.8, isMetallic: false)
         
         return materials
     }()
@@ -89,66 +79,83 @@ class AppViewModel: ObservableObject {
         
         let config = ARWorldTrackingConfiguration()
         config.planeDetection = [.horizontal, .vertical]
-        // Materyal hatalarını azaltmak için çevre dokulandırmasını devre dışı bırakıyoruz
+        // Disable environment texturing to reduce material errors
         config.environmentTexturing = .none
         
-        // Performansı artırmak için ek optimizasyonlar
+        // Additional optimizations to improve performance
         arView.renderOptions = [.disablePersonOcclusion, .disableMotionBlur, .disableFaceMesh]
         arView.automaticallyConfigureSession = false
         
-        // Daha düşük çözünürlükte çalıştır (performans için)
+        // Run at lower resolution (for performance)
         arView.contentScaleFactor = 1.0
         
-        // Seçici özellikleri kapat
-        // Kamera görüntüsünün gösterilmesi için arka planı varsayılan olarak ayarla
+        // Disable selective features
+        // Set background to default for camera feed display
         arView.environment.background = .cameraFeed()
         
-        // AR session'ı güvenli bir şekilde başlat
-        do {
-            arSession?.run(config, options: [.removeExistingAnchors, .resetTracking])
-            
-            // Tüm çevre prob'larını devre dışı bırak
-            arView.environment.sceneUnderstanding.options = []
-            
-            checkARCapabilities()
-            appState = hasCompletedOnboarding ? .ready : .onboarding
-        } catch {
-            print("Failed to start AR session: \(error)")
-            arError = "Failed to start AR session: \(error.localizedDescription)"
-            appState = .error("AR session could not be started. Please restart the app.")
+        // Start AR session safely
+        arSession?.run(config, options: [.removeExistingAnchors, .resetTracking])
+        
+        // Disable all environment probes
+        arView.environment.sceneUnderstanding.options = []
+        
+        checkARCapabilities()
+        
+        // Defer @Published property update to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.appState = self.hasCompletedOnboarding ? .ready : .onboarding
         }
     }
     
     private func checkARCapabilities() {
         guard ARWorldTrackingConfiguration.isSupported else {
-            arError = "ARKit is not supported"
-            appState = .error("This device does not have the necessary hardware for ARKit applications.")
+            // Defer @Published property updates to avoid view update conflicts
+            DispatchQueue.main.async { [weak self] in
+                self?.arError = "ARKit is not supported"
+                self?.appState = .error("This device does not have the necessary hardware for ARKit applications.")
+            }
             return
         }
         
-        isSessionReady = true
+        // Defer @Published property update to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            self?.isSessionReady = true
+        }
     }
     
     func checkOnboardingStatus() {
         // Check if the user has completed onboarding
-        if hasCompletedOnboarding {
-            appState = .ready
-        } else {
-            appState = .onboarding
+        // Defer @Published property update to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if self.hasCompletedOnboarding {
+                self.appState = .ready
+            } else {
+                self.appState = .onboarding
+            }
         }
     }
     
     func completeOnboarding() {
         hasCompletedOnboarding = true
         saveUserPreferences()
-        appState = .ready
+        
+        // Defer @Published property update to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            self?.appState = .ready
+        }
     }
     
     // MARK: - Measurement Operations
     
     func startMeasuring() {
         clearCurrentMeasurement()
-        appState = .placingStartPoint
+        
+        // Defer @Published property update to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            self?.appState = .placingStartPoint
+        }
     }
     
     func setStartPoint(_ position: SIMD3<Float>) {
@@ -158,7 +165,11 @@ class AppViewModel: ObservableObject {
         
         self.startPoint = position
         addPointAnchor(at: position, color: UIColor.green)
-        appState = .placingEndPoint
+        
+        // Defer @Published property update to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            self?.appState = .placingEndPoint
+        }
     }
     
     func setEndPoint(_ position: SIMD3<Float>) {
@@ -168,27 +179,34 @@ class AppViewModel: ObservableObject {
         
         self.endPoint = position
         addPointAnchor(at: position, color: UIColor.red)
-        addLineAnchor(from: startPoint!, to: position)
         
-        // Calculate distance
-        if let start = startPoint {
-            let distance = simd_distance(start, position)
-            
-            // Convert to selected unit
-            let convertedDistance = selectedUnit.convert(fromMeters: distance)
-            
-            currentMeasurement = MeasurementResult(
-                distance: convertedDistance,
-                startPoint: start,
-                endPoint: position,
-                timestamp: Date(),
-                unit: selectedUnit
-            )
+        // Calculate distance and add line anchor
+        guard let start = startPoint else {
+            print("Error: startPoint is nil when setting endPoint")
+            return
         }
         
-        // Değişiklik burada: Modal sheet gösteriyoruz
-        appState = .reviewing
-        showMeasurementResultSheet = true
+        addLineAnchor(from: start, to: position)
+        
+        let distance = simd_distance(start, position)
+        
+        // Convert to selected unit
+        let convertedDistance = selectedUnit.convert(fromMeters: distance)
+        
+        currentMeasurement = MeasurementResult(
+            distance: convertedDistance,
+            startPoint: start,
+            endPoint: position,
+            timestamp: Date(),
+            unit: selectedUnit
+        )
+        
+        // Change here: Show modal sheet
+        // Defer @Published property updates to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            self?.appState = .reviewing
+            self?.showMeasurementResultSheet = true
+        }
     }
     
     func saveMeasurement(with note: String? = nil) {
@@ -201,8 +219,11 @@ class AppViewModel: ObservableObject {
         saveMeasurements()
         
         // Update app state after measurement
-        showMeasurementResultSheet = false
-        appState = .ready
+        // Defer @Published property updates to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            self?.showMeasurementResultSheet = false
+            self?.appState = .ready
+        }
     }
     
     func clearCurrentMeasurement() {
@@ -212,9 +233,13 @@ class AppViewModel: ObservableObject {
         removeAllAnchors()
         
         // Return user to ready state
-        if appState != .onboarding {
-            showMeasurementResultSheet = false
-            appState = .ready
+        // Defer @Published property updates to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if self.appState != .onboarding {
+                self.showMeasurementResultSheet = false
+                self.appState = .ready
+            }
         }
     }
     
@@ -223,20 +248,14 @@ class AppViewModel: ObservableObject {
     private func addPointAnchor(at position: SIMD3<Float>, color: UIColor) {
         guard let arView = arView else { return }
         
-        // Bu fonksiyon zaten main thread'den çağrılıyor
-        // Basit bir anchor oluştur
+        // This function is already called from main thread
+        // Create a simple anchor
         let anchor = AnchorEntity(world: position)
         
-        // Küçük bir küre oluştur - basit malzeme kullan
-        let mesh: MeshResource
-        do {
-            mesh = try MeshResource.generateSphere(radius: 0.02)
-        } catch {
-            print("Failed to generate sphere mesh: \(error)")
-            return // Graceful failure - don't crash the app
-        }
+        // Create a small sphere - use simple material
+        let mesh = MeshResource.generateSphere(radius: 0.01)
         
-        // Cached material kullan - color'a göre seç
+        // Use cached material - select based on color
         let materialKey: String
         if color == UIColor.green {
             materialKey = "greenPoint"
@@ -254,7 +273,7 @@ class AppViewModel: ObservableObject {
         guard let material = Self.cachedMaterials[materialKey] else { return }
         let sphere = ModelEntity(mesh: mesh, materials: [material])
         
-        // Anchor'a ekle ve AR görünümüne ekle
+        // Add to anchor and add to AR view
         anchor.addChild(sphere)
         arView.scene.addAnchor(anchor)
         self.anchors.append(anchor)
@@ -263,33 +282,27 @@ class AppViewModel: ObservableObject {
     private func addLineAnchor(from start: SIMD3<Float>, to end: SIMD3<Float>) {
         guard let arView = arView else { return }
         
-        // Bu fonksiyon zaten main thread'den çağrılıyor
+        // This function is already called from main thread
         let anchor = AnchorEntity(world: start)
         
-        // İki nokta arasındaki mesafeyi hesapla
+        // Calculate distance between two points
         let distance = simd_distance(start, end)
         
-        // İki nokta arasındaki yönü belirle
+        // Determine direction between two points
         let direction = simd_normalize(end - start)
         
-        // İki nokta arasındaki orta nokta
+        // Midpoint between two points
         let midPoint = (start + end) / 2
         
-        // Gelecekte ortaya çıkabilecek Metal hatalarını önlemek için
-        // Metalik olmayan, basit bir çizgi kullan
-        let mesh: MeshResource
-        do {
-            mesh = try MeshResource.generateBox(size: [0.005, 0.005, distance])
-        } catch {
-            print("Failed to generate line mesh: \(error)")
-            return // Graceful failure - don't crash the app
-        }
+        // To prevent potential Metal errors in the future
+        // Use non-metallic, simple line
+        let mesh = MeshResource.generateBox(size: [0.005, 0.005, distance])
         guard let material = Self.cachedMaterials["line"] else { return }
         let line = ModelEntity(mesh: mesh, materials: [material])
         
-        // Dönüş matrisini hesapla
-        // Başlangıç yönü: (0, 0, 1)
-        // Hedef yön: direction
+        // Calculate rotation matrix
+        // Starting direction: (0, 0, 1)
+        // Target direction: direction
         let startDirection = SIMD3<Float>(0, 0, 1)
         let rotationAxis = simd_cross(startDirection, direction)
         let rotationAngle = acos(simd_dot(startDirection, direction))
@@ -299,10 +312,10 @@ class AppViewModel: ObservableObject {
             line.transform.rotation = rotation
         }
         
-        // Çizgiyi konumlandır
+        // Position the line
         line.transform.translation = midPoint - start
         
-        // Anchor'a ekle ve görünüme ekle
+        // Add to anchor and add to view
         anchor.addChild(line)
         arView.scene.addAnchor(anchor)
         self.anchors.append(anchor)
@@ -317,71 +330,57 @@ class AppViewModel: ObservableObject {
     private func addDistanceLabel(at position: SIMD3<Float>, distance: Float) {
         guard let arView = arView else { return }
         
-        // Do distance formatting and mesh generation on background thread
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            
-            // Format distance
-            let convertedDistance = self.selectedUnit.convert(fromMeters: distance)
-            let formattedDistance: String
-            
-            let formatter = NumberFormatter()
-            formatter.maximumFractionDigits = 2
-            formatter.minimumFractionDigits = 0
-            
-            if let formatted = formatter.string(from: NSNumber(value: convertedDistance)) {
-                formattedDistance = "\(formatted) \(self.selectedUnit.rawValue)"
-            } else {
-                formattedDistance = "\(convertedDistance) \(self.selectedUnit.rawValue)"
-            }
-            
-            // Expensive text mesh generation background thread'de
-            let textMesh: MeshResource
-            let backgroundMesh: MeshResource
-            
-            do {
-                textMesh = try MeshResource.generateText(
-                    formattedDistance,
-                    extrusionDepth: 0.001,
-                    font: .systemFont(ofSize: 0.03, weight: .medium),
-                    alignment: .center
-                )
-                
-                // Background mesh generation
-                backgroundMesh = try MeshResource.generatePlane(width: 0.15, height: 0.05)
-            } catch {
-                print("Failed to generate text/background mesh: \(error)")
-                return // Graceful failure - skip label creation if mesh generation fails
-            }
-            
-            // UI updates main thread'de
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self, let arView = self.arView else { return }
-                
-                let anchor = AnchorEntity(world: position)
-                
-                // Cached materials kullan
-                guard let textMaterial = Self.cachedMaterials["textLabel"],
-                      let backgroundMaterial = Self.cachedMaterials["textBackground"] else { return }
-                
-                let textEntity = ModelEntity(mesh: textMesh, materials: [textMaterial])
-                let backgroundEntity = ModelEntity(mesh: backgroundMesh, materials: [backgroundMaterial])
-                
-                // Set up text
-                textEntity.transform.translation = [0, 0, 0.001]
-                
-                // Add background
-                backgroundEntity.addChild(textEntity)
-                anchor.addChild(backgroundEntity)
-                
-                // Set rotation towards camera
-                anchor.look(at: arView.cameraTransform.translation, from: position, relativeTo: nil)
-                
-                // Add to scene
-                arView.scene.addAnchor(anchor)
-                self.anchors.append(anchor)
-            }
+        // Capture selectedUnit on main thread
+        let currentUnit = selectedUnit
+        
+        // Format distance on main thread
+        let convertedDistance = currentUnit.convert(fromMeters: distance)
+        let formattedDistance: String
+        
+        let formatter = NumberFormatter()
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 0
+        
+        if let formatted = formatter.string(from: NSNumber(value: convertedDistance)) {
+            formattedDistance = "\(formatted) \(currentUnit.rawValue)"
+        } else {
+            formattedDistance = "\(convertedDistance) \(currentUnit.rawValue)"
         }
+        
+        // Generate meshes on main thread (RealityKit requirement)
+        let textMesh = MeshResource.generateText(
+            formattedDistance,
+            extrusionDepth: 0.001,
+            font: .systemFont(ofSize: 0.03, weight: .medium),
+            alignment: .center
+        )
+        
+        let backgroundMesh = MeshResource.generatePlane(width: 0.15, height: 0.05)
+        
+        // Create and add entities
+        let anchor = AnchorEntity(world: position)
+        
+        // Use cached materials
+        guard let textMaterial = Self.cachedMaterials["textLabel"],
+              let backgroundMaterial = Self.cachedMaterials["textBackground"] else { return }
+        
+        // Create text and background entities
+        let textEntity = ModelEntity(mesh: textMesh, materials: [textMaterial])
+        let backgroundEntity = ModelEntity(mesh: backgroundMesh, materials: [backgroundMaterial])
+        
+        // Set up text
+        textEntity.transform.translation = [0, 0, 0.001]
+        
+        // Add background with text
+        backgroundEntity.addChild(textEntity)
+        anchor.addChild(backgroundEntity)
+        
+        // Set rotation towards camera
+        anchor.look(at: arView.cameraTransform.translation, from: position, relativeTo: nil)
+        
+        // Add to scene
+        arView.scene.addAnchor(anchor)
+        self.anchors.append(anchor)
     }
     
     private func removeAllAnchors() {

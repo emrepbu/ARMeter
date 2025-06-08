@@ -67,7 +67,10 @@ class ARViewModel: NSObject, ObservableObject {
     // MARK: - AR Session Management
     
     func setupARView(_ view: ARView) {
-        self.arView = view
+        // Defer @Published property update to avoid view update conflicts
+        DispatchQueue.main.async { [weak self] in
+            self?.arView = view
+        }
         
         // Optimize AR View
         view.renderOptions = [.disablePersonOcclusion, .disableMotionBlur, .disableFaceMesh]
@@ -76,7 +79,7 @@ class ARViewModel: NSObject, ObservableObject {
         // Enable camera feed background
         view.environment.background = .cameraFeed()
         
-        // Metal performans optimizasyonları
+        // Metal performance optimizations
         if let _ = MTLCreateSystemDefaultDevice() {
             // Metal device created successfully
         }
@@ -109,23 +112,14 @@ class ARViewModel: NSObject, ObservableObject {
     
     func resetARSession() {
         // Reset ARSession and cleanup any environment probes
-        do {
-            arView?.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
-            
-            // Clean up any retained ARFrames
-            autoreleasepool {
-                // Force a memory cleanup
-                let tempView = ARView(frame: .zero)
-                tempView.session.pause()
-                tempView.removeFromSuperview()
-            }
-        } catch {
-            print("Failed to reset AR session: \(error)")
-            // Update tracking status to reflect the error
-            DispatchQueue.main.async { [weak self] in
-                self?.planeDetectionStatus = "Failed to reset AR session"
-                self?.isTracking = false
-            }
+        arView?.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        
+        // Clean up any retained ARFrames
+        autoreleasepool {
+            // Force a memory cleanup
+            let tempView = ARView(frame: .zero)
+            tempView.session.pause()
+            tempView.removeFromSuperview()
         }
     }
     
@@ -229,18 +223,17 @@ class ARViewModel: NSObject, ObservableObject {
 // MARK: - ARSessionDelegate
 extension ARViewModel: ARSessionDelegate {
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        // Kritik: ARFrame tutulmayacak, sadece gerekli bilgiler alınacak
-        let trackingState = frame.camera.trackingState
+        // Critical: Only extract tracking state from ARFrame and immediately release
+        let currentTrackingState = frame.camera.trackingState
         
-        // Ana thread'e geçmeden önce lokal değişkenlere kopyalama yapıyoruz
-        // Bu sayede frame referansını tutmuyoruz
-        DispatchQueue.main.async { [weak self] in
+        // To avoid capturing ARFrame, copy value to local variable
+        // and immediately update on main thread
+        DispatchQueue.main.async { [weak self, currentTrackingState] in
             guard let self = self else { return }
-            self.trackingState = trackingState
+            self.trackingState = currentTrackingState
             self.updateTrackingStatus()
         }
-        
-        // Frame'i kesinlikle tutmuyoruz - hemen serbest bırakıyoruz
+        // ARFrame goes out of scope here and is automatically released
     }
     
     func session(_ session: ARSession, didFailWithError error: Error) {

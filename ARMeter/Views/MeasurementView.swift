@@ -221,7 +221,7 @@ struct ARViewContainer: UIViewRepresentable {
         }
         
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
-            // Eğer zaten bir işlem yapılıyorsa, yeni dokunmayı işleme alma
+            // If an operation is already in progress, don't handle new touches
             guard !isProcessingTap else { return }
             guard let arView = gesture.view as? ARView else { return }
             
